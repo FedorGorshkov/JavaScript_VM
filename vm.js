@@ -1,11 +1,12 @@
-// Функция, которая возвращает первые amount_of_nums встреченных чисел в строке.
+// Функция, которая возвращает первые amount_of_nums встреченных чисел/указателей в строке.
 // Справедливым является замечание про регулярные выражения, однако я пока не так силён
-// и в них и в JS, чтобы использовать их в таком нетривиальном примере.
-// Функция, которая возвращает первые amount_of_nums встреченных чисел в строке
+// в них, чтобы использовать их в таком нетривиальном примере.
 function get_nums(amount_of_nums, some_str) {
     some_res = new Array(amount_of_nums);
     figures = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '[', ']']; j = 0;
     for(k = 0; k < amount_of_nums; k++) {
+        // started нужна главным образом для корректного пропуска пробелов, some_num просто аккумулирует
+        // число/указатель посимвольно в виде строки.
         started = false; some_num = '';
         while((!started || (started && some_str[j] != ' ')) && j < some_str.length) {
             if (figures.includes(some_str[j])) {
@@ -13,7 +14,7 @@ function get_nums(amount_of_nums, some_str) {
                 some_num += some_str[j];
             }
             else if (some_str[j] != ' ')
-                // Если встретили какой-то иной символ, отличный от пробела
+                // Если встретили какой-то иной символ, отличный от пробела и от "разрешённых" в figures
                 throw new Error("ArgumentsError: incorrect arguments\nAt line " + l + ': ' + code[l]); 
             j++;
         }
@@ -25,31 +26,31 @@ function get_nums(amount_of_nums, some_str) {
 }
 
 // Функция, которая проверяет корректность переданного(-ых) аргументов к функциям
-function check(indexes_of_memory_cells, line, some_operation) {
+function check(some_args, line, some_operation) {
     // Отдельный блок под input/output
     if (['input', 'output'].includes(some_operation)) {
-        if (indexes_of_memory_cells instanceof Array) {
+        if (some_args instanceof Array) {
             throw new Error('ArgumentsError: for the ' + (some_operation == 'input' ? 'input' : 'output') + ' operation you must give only ' +
             'one adress\nAt line ' + line + ': ' + code[line]);
         }
-        if (indexes_of_memory_cells[0].indexOf('[') == -1) {
+        if (some_args[0].indexOf('[') == -1) {
             throw new Error('ArgumentsError: for the ' + (some_operation == 'input' ? 'input' : 'output') + ' operation you must give adress ' +
             'of memory cell, not number\nAt line ' + line + ': ' + code[line]);
         }
-        check_one(indexes_of_memory_cells, line, some_operation);
+        check_one(some_args, line, some_operation);
     }
     // Если передан только один аргумент
-    else if (!(indexes_of_memory_cells instanceof Array)) {
+    else if (!(some_args instanceof Array)) {
         // То и проверяем только один
-        check_one(indexes_of_memory_cells, line, some_operation);
+        check_one(some_args, line, some_operation);
     }
     else {
         // Иначе проверяем все
-        for (some of indexes_of_memory_cells) {
+        for (some of some_args) {
             // Проверяем, является ли последний из трёх аргументов ссылкой на память (т.е. куда нужно записать результат)
-            // Обращение к indexes_of_memory_cells[2] никогда не нарушит границы, т.к. операции input/output рассмотрены отдельно,
+            // Обращение к some_args[2] никогда не нарушит границы, т.к. операции input/output рассмотрены отдельно,
             // а аргумент к goto не проверяется в этой функции. Остаются только операции, у которых всегда три аргумента
-            if (some == indexes_of_memory_cells[2] && !(some.includes('['))) {
+            if (some == some_args[2] && !(some.includes('['))) {
                 throw new Error('ArgumentsError: for the ' + some_operation + ' operation, the third argument must be a memory'+ 
                 'reference\nAt line ' + line + ': ' + code[line]);
             }
@@ -61,20 +62,16 @@ function check(indexes_of_memory_cells, line, some_operation) {
 
 function check_one(some, line, some_operation) {
     // Если перед нами число, а не указатель на память, то в принципе оно может быть совершенно любым
-    if (!some.includes('[', ']')) {
-        return;
-    } 
+    if (!some.includes('[', ']')) return;
     // Проверяем соответствие адреса шаблону [1-3 цифры]
-    if (some.match(/(\[:?)\d{1,3}(\]:?)$/i) == null) {
+    if (some.match(/(\[:?)\d{1,3}(\]:?)$/i) == null)
         throw new Error('ArgumentsError: incorrect adress\nAt line ' + line + ': ' + code[line]);
-    }
     // Приводим к численному виду, чтобы провести дальнейшие проверки
     index = Number(some.replace('[', '').replace(']', ''));
     // -1 это кодовое обозначение того, что в функции get_nums не нашлось одного или нескольких аргументов
-    if (index == -1) {
+    if (index == -1)
         throw new Error('ArgumentsError: ' + some_operation + ' operation requires 3 arguments\
         \nAt line ' + line + ': ' + code[line]);
-    }
     // Проверка на выход за границу массива memory
     if (index < 0 || index > 999) {
         throw new Error('MemoryError: the index of memory cell must belong to the interval [0,999]\
@@ -104,10 +101,8 @@ while (l < code.length) {
     // Чтобы от лишнего пробела в начале строки всё не ломалось, сделал через indexOf 
     // (на самом деле ради перфекционизма, табуляции после if'a красивые ставить)
     else if (str.indexOf("input") != -1) {
-        // А тут уже чёткий синтаксис, только input [n], где 0 <= n < 1000
         index = String(get_nums(1, str.slice(str.indexOf('input') + 6))[0]);
-        check(index, l, 'input');
-        // Собственно ввод
+        check(index, l+1, 'input');
         value = prompt("Enter the value of memory cell " + index + ": ");
         // Проверяем, является ли введённое значение корректным
         if (Number(value) == NaN || value == '' || value == null) throw new Error('InputError: the entered value must be a number');
@@ -119,18 +114,17 @@ while (l < code.length) {
     // Вывод, стоит else if потому что в моём языке строго одна команда в строку
     else if (str.indexOf("output") != -1) {
         index = String(get_nums(1, str.slice(str.indexOf('output') + 7))[0]);
-        check(index, l, 'input');
+        check(index, l+1, 'input');
         console.log(memory[index]); 
         understood = true;
     }
     else {
-        // Далее идут операции, синтаксис одинаков: add/sub/div/mul/rem cell1 cell2 cell_for_res
-        // rem, кстати, от remainder - остаток от деления cell1 на cell2, записанный в cell_for_res
+        // Далее идут операции
         operations = [["add", '+'], ["sub", '-'], ["div", '/'], ["mul", '*'], ["rem", '%']];
         for (operation of operations) {
             if (str.indexOf(operation[0]) != -1) {
                 args = get_nums(3, str.slice(str.indexOf(operation[0]) + 4));
-                check(args, l, operation[0]);
+                check(args, l + 1, operation[0]);
                 args[2] = args[2].replace('[', '').replace(']', '');
                 // Если оба аргумента - ссылки (третий всегда является ссылкой)
                 if (args[0].includes("[") && args[1].includes("[")) {
@@ -159,15 +153,14 @@ while (l < code.length) {
         // Операция goto. Очень полезная, заменяет в совокупности с if'ом цикл.
         if (str.indexOf("goto") != -1) {
             new_line = Number(get_nums(1, str.slice(str.indexOf('goto') + 5))[0]);
-            // Проверяем валидность адреса строки
+            // Проверяем валидность адреса строки. Сюда же приписывается ошибка неуказания new_line
+            // (т.к. если get_nums не нашла аргумент она возвращает -1, -1 < 0)
             if (new_line < 0 || new_line > code.length)
-                throw new Error("ArgumentsError: incorrect line number for goto\nAt line " + l + ': ' + str);
-            // -2 т.к. l инкременируется в конце шага цикла
-            l = new_line - 2; understood = true;
+                throw new Error("ArgumentsError: incorrect/missing line number for goto\nAt line " + l + ': ' + str);
+            // -2 т.к. l инкрементируется в конце шага цикла
+            l = new_line - 2; understood = true;    
         }
-        // Я сделал свой if. Его синтаксис таков: if (условие) { действия в разных строках }
-        // Условие должно соответствовать синтаксису условий в JS. Открытие if'а должно быть в той же строке, что и if
-        // Закрытие if'а должно быть в отдельной строке.
+        // Я сделал свой if.
         else if (str.indexOf("if") != -1) {
             // "Вырезаем" условие (скобки, фигурные и круглые, на самом деле не нужны, нужна только закрывающая фигурная)
             comprasion = str.slice(str.indexOf("if") + 3);
@@ -181,12 +174,12 @@ while (l < code.length) {
             }
             // Пропускаем следующие строки до закрытия if, если условие не выполняется
             if (!eval(comprasion)) {
-                // Нужно найти закрывающую скобку по-умному, т.к. if-ы могут быть вложенными
+                // Нужно найти закрывающую скобку по-умному, т.к. if'ы могут быть вложенными
                 skipped_lines = 0; p = l + 1;
                 opened_braces = 0; closed_braces = 0;
                 while (closed_braces != opened_braces + 1) { 
-                    // Если следующая строка - последняя, а мы так и не нашли закрывающую скобку
-                    if (p + 1 > code.length - 1)
+                    // Если следующая строка не существует, а мы так и не нашли закрывающую скобку
+                    if (p + 1 > code.length)
                         // Выводим соответствующую ошибку
                         throw new Error('SyntaxError: "if" opened, but not closed\nAt line ' + l + ': ' + str);
                     if (code[p].includes('{')) opened_braces++;
@@ -197,9 +190,8 @@ while (l < code.length) {
             }
             understood = true;
         }
-        // На строки кода, которые не являются операциями или комментариями выводим соответствующую ошибку.
     }
-    // Если текущая строка не является командой или закрыванием if'а
+    // Если в текущей строке не выполнена ни одна команда и строка не является закрыванием if'а
     if (!understood && !Array.from(new Set(str)).every(elem => [' ', '}', '\t', '\n', '\r'].includes(elem)))
         // То эта строка не может быть выполнена, о чём и сообщаем пользователю. Напомню, что
         // если строка - комментарий, то происходит l++ и continue, до сюда интерпретатор не доходит
